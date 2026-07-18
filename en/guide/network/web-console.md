@@ -15,7 +15,9 @@ EasyTier's web console has 2 versions:
 - `easytier-web` (web API backend only)
 - `easytier-web-embed` (web frontend + web API backend)
 
-Below is an example of deploying both front-end and back-end using `easytier-web-embed`:
+Below is the example of deploying both front-end and back-end using `easytier-web-embed`:
+
+::: details cli
 
 ```sh
 ./easytier-web-embed \
@@ -24,6 +26,46 @@ Below is an example of deploying both front-end and back-end using `easytier-web
     --config-server-port 22020 \
     --config-server-protocol udp
 ```
+:::
+
+::: details docker
+
+```sh [docker]
+   # docker.io image
+   docker pull easytier/easytier:latest
+   docker run -d --entrypoint easytier-web-embed -v /yourpath/data:/app -p 11211:11211 -p 22020:22020/udp easytier/easytier:latest
+
+   # Domestic users can use DaoCloud image
+   docker pull m.daocloud.io/docker.io/easytier/easytier:latest
+   docker run -d --entrypoint easytier-web-embed -v /yourpath/data:/app -p 11211:11211 -p 22020:22020/udp easytier/easytier:latest
+   ```
+
+-v paths should be modified according to your own situation, /app should not be changed, this can be seen on Docker Hub as its default workdir
+
+:::
+
+
+::: details docker-compose.yml
+
+```yaml [docker-compose.yml]
+services:
+  easytier:
+    # If the easytier-core image was installed previously, change it to the previous image name
+    image: easytier/easytier:latest 
+    container_name: easytier-web-embed
+    restart: unless-stopped
+    ports:
+      - "11211:11211"
+      - "22020:22020"
+    environment:
+       - TZ=Asia/Shanghai
+    entrypoint: ["/sbin/tini", "--", "easytier-web-embed"]
+    command: --api-server-port 11211 --api-host http://127.0.0.1:11211 --config-server-port 22020 --config-server-protocol udp --db /data/et.db
+    network_mode: host
+    volumes:
+      - ./data:/data
+   ```
+:::
 
 If no content is displayed after running, the deployment is successful.
 
@@ -48,11 +90,42 @@ Click `Register` to create an account. If the verification code fails to load, y
 
 Previously, we set up the web console locally with the configuration delivery port 22020 and UDP protocol. The command for EasyTier to connect to the self-hosted console is:
 
+::: details cli
+
 ```sh
-# ./easytier-core -w <protocol>://<host>:<port>/<username_on_your_self-hosted_web_console>
+# ./easytier-core -w <protocol>://<host>:<port>/<The_username_on_your_self-hosted_web_console>
 # protocol: udp, tcp, ws, wss
-./easytier-core -w udp://127.0.0.1:22020/<your_username_on_the_self-hosted_web_console>
+./easytier-core -w udp://127.0.0.1:22020/<The_username_on_your_self-hosted_web_console>
 ```
+
+:::
+
+::: details docker-compose.yml
+
+   ```yaml [docker-compose.yml]
+    services:
+      easytier:
+        # Domestic users can use DaoCloud image
+        # image: m.daocloud.io/docker.io/easytier/easytier:latest
+        image: easytier/easytier:latest
+        hostname: easytier
+        container_name: easytier
+        restart: unless-stopped
+        network_mode: host
+        cap_add:
+          - NET_ADMIN
+          - NET_RAW
+        environment:
+          - TZ=Asia/Shanghai
+        devices:
+          - /dev/net/tun:/dev/net/tun
+        volumes:
+          - /etc/machine-id:/etc/machine-id:ro
+          - ./conf:/config
+        command: --config-server udp://127.0.0.1:22020/<The_username_on_your_self-hosted_web_console>
+   ```
+
+   :::
 
 Subsequent usage is the same as the official console.
 
