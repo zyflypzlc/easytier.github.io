@@ -15,7 +15,9 @@ EasyTier的web控制台有2个版本
 - `easytier-web`（仅web api后端）
 - `easytier-web-embed`（web前端 + web api后端）
 
-下面举一个用`easytier-web-embed`前后端同时部署的例子
+下面是用`easytier-web-embed`前后端同时部署的例子
+
+::: details cli
 
 ```sh
 ./easytier-web-embed \
@@ -24,6 +26,46 @@ EasyTier的web控制台有2个版本
     --config-server-port 22020 \
     --config-server-protocol udp
 ```
+:::
+
+::: details docker
+
+```sh [docker]
+   # docker.io 镜像
+   docker pull easytier/easytier:latest
+   docker run -d --entrypoint easytier-web-embed -v /yourpath/data:/app -p 11211:11211 -p 22020:22020/udp easytier/easytier:latest
+
+   # 国内用户可以使用 DaoCloud 镜像
+   docker pull m.daocloud.io/docker.io/easytier/easytier:latest
+   docker run -d --entrypoint easytier-web-embed -v /yourpath/data:/app -p 11211:11211 -p 22020:22020/udp easytier/easytier:latest
+   ```
+
+-v 路径映射根据自己的情况修改，/app 不要改，这个可以在 docker hub 上看到他默认的 workdir
+
+:::
+
+
+::: details docker-compose.yml
+
+```yaml [docker-compose.yml]
+services:
+  easytier:
+    # 如果之前安装了easytier-core的镜像，则改为之前的镜像名
+    image: easytier/easytier:latest 
+    container_name: easytier-web-embed
+    restart: unless-stopped
+    ports:
+      - "11211:11211"
+      - "22020:22020"
+    environment:
+       - TZ=Asia/Shanghai
+    entrypoint: ["/sbin/tini", "--", "easytier-web-embed"]
+    command: --api-server-port 11211 --api-host http://127.0.0.1:11211 --config-server-port 22020 --config-server-protocol udp --db /data/et.db
+    network_mode: host
+    volumes:
+      - ./data:/data
+   ```
+:::
 
 运行后若无任何内容显示则成功。
 
@@ -48,17 +90,48 @@ EasyTier的web控制台有2个版本
 
 前面我们本地搭建好了web控制台，并且配置下发端口为22020，协议UDP，那么easytier接入自建控制台的指令就是
 
+::: details cli
+
 ```sh
 # ./easytier-core -w <protocol>://<host>:<port>/<你在自建web控制台上的用户名>
 # protocol: udp, tcp, ws, wss
 ./easytier-core -w udp://127.0.0.1:22020/<你在自建web控制台上的用户名>
 ```
+:::
+
+::: details docker-compose.yml
+
+   ```yaml [docker-compose.yml]
+    services:
+      easytier:
+        # 国内用户可以使用 daocloud.io 镜像
+        # image: m.daocloud.io/docker.io/easytier/easytier:latest
+        image: easytier/easytier:latest
+        hostname: easytier
+        container_name: easytier
+        restart: unless-stopped
+        network_mode: host
+        cap_add:
+          - NET_ADMIN
+          - NET_RAW
+        environment:
+          - TZ=Asia/Shanghai
+        devices:
+          - /dev/net/tun:/dev/net/tun
+        volumes:
+          - /etc/machine-id:/etc/machine-id:ro
+          - ./conf:/config
+        command: --config-server udp://127.0.0.1:22020/<你在自建web控制台上的用户名>
+   ```
+
+   :::
+
 
 接下来的用法就和官方控制台一样了。
 
 ::: tip 注意
 
-Web 控制台有了两个默认账户，用户名与密码分别为`admin`和`user`。虽然这属于普通账户，但仍需留意其存在。
+Web 控制台有两个默认账户，用户名与密码分别为`admin`和`user`。虽然这属于普通账户，但仍需留意其存在。
 
 :::
 
